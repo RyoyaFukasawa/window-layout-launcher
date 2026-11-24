@@ -35,7 +35,7 @@ VIDEO=1 npm run e2e               # 操作を動画に残す（e2e/.results/vide
 通常の Chrome は `--load-extension` を受け付けないため、Playwright のテスト用 Chromium を使います。
 タブのドラッグ（少しずつ動かして置き場所が逆戻りしないか）、別ウィンドウへの移動、セットを開いたときの
 固定タブ・タブグループの再現を、本物の Chrome API で確かめています（`e2e/`）。テストは各ファイルの隣（`*.test.ts`）にあります。
-タブのドラッグ＆ドロップの書き換え（`src/options/dragTabs.ts`）・グループの整合（`src/shared/groups.ts`）・位置計算・保存形式などを確認しています。
+タブのドラッグ＆ドロップの書き換え（`src/features/tab-drag`）・グループの整合（`src/entities/window`）・位置計算・保存形式などを確認しています。
 
 ## Chrome への読み込み
 
@@ -45,17 +45,43 @@ VIDEO=1 npm run e2e               # 操作を動画に残す（e2e/.results/vide
 
 Windows で使うだけなら、ビルド済みの `dist/` をコピーして読み込めば OK（Node.js 不要）。
 
-## 構成
+## 構成（Feature-Sliced Design）
 
-- `src/background.ts` … セットを開く（起動時の ★ セット、ポップアップ・設定画面からの指示）
-- `src/popup/` … アイコンのクリックで開くセット選択（検索、今のウィンドウをセットとして保存）
-- `src/options/` … 設定画面（React + Tailwind CSS + shadcn/ui）
-  - `App.tsx` … 画面全体、並べ替え（dnd-kit）、キーボード操作
-  - `LayoutPreview.tsx` … 配置図（interact.js でドラッグ移動・リサイズ、吸着とガイド線）
-  - `WindowCard.tsx` … ウィンドウごとの設定
-  - `dragTabs.ts` … タブのドラッグ＆ドロップで並び・固定・グループをどう変えるか（React に依存しない）
-  - `ChromeFrame.tsx` … タブを実際の Chrome の見た目（横タブ／縦タブ）で表示・編集。タブの向きはウィンドウの枠の大きさから推測（`hooks.ts` の `detectTabStrip`）し、手動でも切り替え可
-  - `logic.ts` / `hooks.ts` … 計算・保存・ディスプレイ情報
-- `src/shared/` … 共通の型・位置計算・初期値・保存形式（`store.ts`、旧形式からの移行を含む）・タブグループの整合（`groups.ts`）
-- `src/components/ui/` … shadcn/ui のコンポーネント（`npx shadcn@latest add ...` で追加）
+`src/` は [FSD](https://feature-sliced.design/) の層に分けています。上の層は下の層だけを import でき、
+同じ層の別スライスは import しません（`npm run lint:fsd` で確認。`npm run build` でも実行されます）。
+スライスの外からは、各スライスの `index.ts`（公開 API）経由で import します。
+
+```
+src/
+├── app/                 入り口（ページごとの main・バックグラウンド・全体のスタイル・エラー表示）
+│   ├── background/      Chrome の起動時・メッセージで、セットを開く
+│   ├── options/         設定画面の入り口
+│   ├── popup/           ポップアップの入り口
+│   ├── providers/       ErrorBoundary
+│   └── styles/          Tailwind と shadcn/ui のテーマ
+├── pages/
+│   ├── options/         設定画面（セット・配置図・ウィンドウの編集をまとめる）
+│   └── popup/           アイコンのクリックで開くセット選択
+├── widgets/
+│   ├── layout-preview/  配置図（interact.js でドラッグ移動・リサイズ、吸着とガイド線）
+│   ├── set-list/        レイアウトセットの一覧（並べ替え・名前の変更・★）
+│   └── window-editor/   ウィンドウの切り替えタブと、Chrome 風のタブ編集（横タブ・縦タブ）
+├── features/
+│   ├── tab-drag/        タブのドラッグ＆ドロップ（並び・固定・グループの決め方、ドラッグ中の表示）
+│   ├── tab-strip/       Chrome のタブの向き（横・縦）の推測と切り替え
+│   ├── capture-windows/ 今開いているウィンドウ配置の取り込み
+│   ├── resolve-title/   URL のタイトルを開いているタブ・履歴から探す
+│   └── open-set/        セットを実際に開く（ウィンドウ・固定タブ・タブグループ）
+├── entities/
+│   ├── layout-set/      レイアウトセットと保存形式（旧形式からの移行・初期値）
+│   └── window/          ウィンドウ・タブ・タブグループ・ディスプレイの型と計算
+│       └── @x/          layout-set だけに見せる一部（FSD のクロスインポート）
+├── shared/
+│   ├── ui/              shadcn/ui のコンポーネント、ファビコン
+│   └── lib/             id・URL・プラットフォーム判定・汎用フック
+└── testing/             テスト用のデータ作り（テストからだけ使う）
+```
+
 - `public/manifest.json` … そのまま dist/ にコピー
+- `e2e/` … Playwright の E2E テスト
+- `scripts/check-fsd.mjs` … FSD の依存ルールの確認
