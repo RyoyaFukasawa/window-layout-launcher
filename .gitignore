@@ -1,0 +1,7 @@
+node_modules/
+dist/
+e2e/.results/
+e2e/videos/
+e2e/screens/
+.DS_Store
+*.log

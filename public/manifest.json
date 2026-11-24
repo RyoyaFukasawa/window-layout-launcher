@@ -1,0 +1,35 @@
+{
+  "manifest_version": 3,
+  "name": "Window Layout Launcher",
+  "version": "0.5.0",
+  "description": "Chrome起動時に、決めたURL・固定タブ・ディスプレイ・サイズでウィンドウを開く",
+  "permissions": [
+    "system.display",
+    "tabs",
+    "storage",
+    "favicon",
+    "history",
+    "tabGroups"
+  ],
+  "options_ui": {
+    "page": "options.html",
+    "open_in_tab": true
+  },
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "action": {
+    "default_title": "レイアウトセットを開く",
+    "default_popup": "popup.html"
+  },
+  "commands": {
+    "_execute_action": {
+      "suggested_key": {
+        "default": "Ctrl+Shift+Y",
+        "mac": "Command+Shift+Y"
+      },
+      "description": "レイアウトセットの選択を開く"
+    }
+  }
+}
