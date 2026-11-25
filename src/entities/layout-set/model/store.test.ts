@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { tabs, win } from "@/testing/fixtures";
-import { layoutFor, newSet, parseImported, setStats } from "./store";
+import { defaultState, layoutFor, newSet, parseImported, setStats } from "./store";
 
 describe("layoutFor", () => {
   it("そのモードが空なら、もう一方のレイアウトを使う", () => {
@@ -30,5 +30,15 @@ describe("parseImported", () => {
   });
   it("違う形式はエラー", () => {
     expect(() => parseImported({ foo: 1 })).toThrow();
+  });
+});
+
+describe("データが無いとき", () => {
+  it("初期の状態はセットなし（サンプルのデータは入れない）", () => {
+    expect(defaultState()).toEqual({ version: 2, sets: [], startupSetId: null });
+  });
+  it("セットが空の保存データを読み込んでも、空のまま（サンプルで埋めない）", () => {
+    const r = parseImported({ version: 2, sets: [], startupSetId: null });
+    expect(r).toEqual({ kind: "state", state: { version: 2, sets: [], startupSetId: null } });
   });
 });

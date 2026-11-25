@@ -52,6 +52,7 @@ export function SetList(p: Props) {
       <CardContent className="px-2">
         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
           <SortableContext items={p.sets.map((s) => s.id)} strategy={verticalListSortingStrategy}>
+            {!p.sets.length && <p className="px-2 py-3 text-xs text-muted-foreground">まだセットがありません。＋ で作成できます。</p>}
             <ul className="flex flex-col gap-0.5">
               {p.sets.map((s) => (
                 <SetRow
@@ -60,7 +61,7 @@ export function SetList(p: Props) {
                   mode={p.mode}
                   selected={s.id === p.currentId}
                   startup={s.id === p.startupId}
-                  canDelete={p.sets.length > 1}
+                  canDelete
                   renaming={s.id === p.renamingId}
                   onRenamingDone={p.onRenamingDone}
                   onSelect={() => p.onSelect(s.id)}

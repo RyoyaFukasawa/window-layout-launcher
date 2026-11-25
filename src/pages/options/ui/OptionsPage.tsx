@@ -319,6 +319,17 @@ export function OptionsPage() {
     selectSet(ns.id);
     setRenamingId(ns.id);
   };
+  /** 今開いているウィンドウ配置から、新しいセットを作る */
+  const createFromCurrent = async () => {
+    const result = await captureWindows(displays, activeMode);
+    if (!result.length) { toast.error("取り込めるウィンドウがありません"); return; }
+    const ns = newSet("今のウィンドウ");
+    ns.layouts[activeMode] = result;
+    update((s) => { s.sets.push(ns); if (!s.startupSetId && s.sets.length === 1) s.startupSetId = ns.id; });
+    selectSet(ns.id);
+    setRenamingId(ns.id);
+    toast.success(`${result.length} 個のウィンドウからセットを作りました`, { description: "名前を入力してください" });
+  };
   const duplicateSet = (id: string) => {
     const src = state?.sets.find((x) => x.id === id);
     if (!src) return;
@@ -331,14 +342,18 @@ export function OptionsPage() {
     toast.success(`「${src.name}」を複製しました`);
   };
   const deleteSet = (id: string) => {
-    if (!state || state.sets.length <= 1) return;
+    if (!state) return;
     const idx = state.sets.findIndex((x) => x.id === id);
     const name = state.sets[idx]?.name;
     update((s) => {
       s.sets.splice(idx, 1);
       if (s.startupSetId === id) s.startupSetId = null;
     });
-    if (set?.id === id) selectSet(state.sets[idx + 1]?.id ?? state.sets[idx - 1].id);
+    if (set?.id === id) {
+      const next = state.sets[idx + 1] ?? state.sets[idx - 1];
+      if (next) selectSet(next.id);
+      else { setCurrentId(null); history.replaceState(null, "", "#"); }
+    }
     toast(`「${name}」を削除しました`);
   };
   const toggleStartup = (id: string) => update((s) => { s.startupSetId = s.startupSetId === id ? null : id; });
@@ -367,7 +382,7 @@ export function OptionsPage() {
     }
   };
 
-  if (!state || !set || !layouts || !displays.length) {
+  if (!state || !displays.length) {
     return <div className="grid min-h-screen place-items-center text-sm text-muted-foreground">読み込み中…</div>;
   }
 
@@ -394,7 +409,7 @@ export function OptionsPage() {
         <aside className="flex flex-col gap-6 lg:sticky lg:top-20 lg:max-h-[calc(100vh-6rem)] lg:self-start lg:overflow-y-auto [&>*]:shrink-0">
           <SetList
             sets={state.sets}
-            currentId={set.id}
+            currentId={set?.id ?? ""}
             startupId={state.startupSetId}
             mode={activeMode}
             onSelect={selectSet}
@@ -464,7 +479,7 @@ export function OptionsPage() {
               <Button variant="outline" size="sm" onClick={exportJson}><Download /> 設定を書き出す</Button>
               <Button variant="outline" size="sm" onClick={() => fileRef.current?.click()}><Upload /> 設定を読み込む</Button>
               <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive" onClick={() => setConfirm({ kind: "reset" })}>
-                <RotateCcw /> 初期値に戻す
+                <RotateCcw /> すべてのセットを削除
               </Button>
               <input
                 ref={fileRef} type="file" accept="application/json" hidden
@@ -474,6 +489,9 @@ export function OptionsPage() {
           </Card>
         </aside>
 
+        {!set || !layouts ? (
+          <EmptyState onAdd={addSet} onCapture={() => void createFromCurrent()} />
+        ) : (
         <div className="flex min-w-0 flex-col gap-6">
           <Card>
             <CardHeader>
@@ -599,6 +617,7 @@ export function OptionsPage() {
           </DragPreviewContext.Provider>
           </DndContext>
         </div>
+        )}
 
       </main>
 
@@ -606,16 +625,16 @@ export function OptionsPage() {
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>
-              {confirm?.kind === "reset" ? "初期値に戻しますか？" : confirm?.kind === "delete" ? "セットを削除しますか？" : wins.length ? "今の配置で上書きしますか？" : "今の配置を取り込みますか？"}
+              {confirm?.kind === "reset" ? "すべてのセットを削除しますか？" : confirm?.kind === "delete" ? "セットを削除しますか？" : wins.length ? "今の配置で上書きしますか？" : "今の配置を取り込みますか？"}
             </AlertDialogTitle>
             <AlertDialogDescription>
               {confirm?.kind === "reset"
-                ? "すべてのセットが削除され、初期のセット1つだけに戻ります。必要なら先に設定を書き出してください。"
+                ? "すべてのセットが削除され、空の状態に戻ります。元に戻せないので、必要なら先に設定を書き出してください。"
                 : confirm?.kind === "delete"
                   ? `「${state.sets.find((x) => x.id === confirm.id)?.name}」を削除します。元に戻せません。`
                   : wins.length
-                    ? `「${set.name}」の「${MODE_LABEL[m]}」のレイアウトを、今開いているChromeのウィンドウ配置で上書きします。上書きした内容は元に戻せません。`
-                    : `「${set.name}」の「${MODE_LABEL[m]}」のレイアウトに、今開いているChromeのウィンドウ配置を取り込みます。`}
+                    ? `「${set?.name}」の「${MODE_LABEL[m]}」のレイアウトを、今開いているChromeのウィンドウ配置で上書きします。上書きした内容は元に戻せません。`
+                    : `「${set?.name}」の「${MODE_LABEL[m]}」のレイアウトに、今開いているChromeのウィンドウ配置を取り込みます。`}
             </AlertDialogDescription>
             {confirm?.kind === "capture" && (
               <div className="mt-2 grid grid-cols-[1fr_auto_1fr] items-center gap-2 text-sm">
@@ -630,13 +649,13 @@ export function OptionsPage() {
             <AlertDialogAction
               variant={confirm?.kind === "capture" && !wins.length ? "default" : "destructive"}
               onClick={() => {
-                if (confirm?.kind === "reset") { reset(); setCurrentId(null); setSel(-1); bump(); toast("初期値に戻しました"); }
+                if (confirm?.kind === "reset") { reset(); setCurrentId(null); setSel(-1); bump(); toast("すべてのセットを削除しました"); }
                 else if (confirm?.kind === "delete") deleteSet(confirm.id);
                 else if (confirm?.kind === "capture") doCapture(confirm.result);
                 setConfirm(null);
               }}
             >
-              {confirm?.kind === "reset" ? "初期値に戻す" : confirm?.kind === "delete" ? "削除する" : wins.length ? "上書きする" : "取り込む"}
+              {confirm?.kind === "reset" ? "すべて削除" : confirm?.kind === "delete" ? "削除する" : wins.length ? "上書きする" : "取り込む"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -698,3 +717,18 @@ const snapCenterToCursor: Modifier = ({ activatorEvent, draggingNodeRect, transf
     y: transform.y + activatorEvent.clientY - draggingNodeRect.top - draggingNodeRect.height / 2,
   };
 };
+
+/** セットが1つも無いとき */
+function EmptyState({ onAdd, onCapture }: { onAdd: () => void; onCapture: () => void }) {
+  return (
+    <Card className="items-center gap-3 py-16 text-center">
+      <LayoutGrid className="size-9 text-muted-foreground" />
+      <CardTitle>レイアウトセットがありません</CardTitle>
+      <CardDescription>今開いているウィンドウの配置から作るか、空のセットを作って編集します。</CardDescription>
+      <div className="mt-2 flex flex-wrap justify-center gap-2">
+        <Button onClick={onCapture}><Camera /> 今のウィンドウから作る</Button>
+        <Button variant="outline" onClick={onAdd}><Plus /> 空のセットを作る</Button>
+      </div>
+    </Card>
+  );
+}

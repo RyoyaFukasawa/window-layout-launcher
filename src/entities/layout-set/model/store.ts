@@ -1,6 +1,5 @@
 import { ensureIds, type Layouts, type Mode, type WindowSpec } from "@/entities/window/@x/layout-set";
 import { newId } from "@/shared/lib/id";
-import { LAYOUTS as DEFAULT_LAYOUTS } from "../config/defaults";
 import type { AppState, LayoutSet } from "./types";
 
 // 保存形式（chrome.storage.local の "appState"）と、旧形式からの移行
@@ -11,14 +10,13 @@ export function newSet(name: string, layouts?: Layouts): LayoutSet {
   return { id: newId("s"), name, layouts: ensureIds(layouts ? structuredClone(layouts) : { docked: [], laptop: [] }) };
 }
 
+/** データが無いときの状態（セットなし） */
 export function defaultState(): AppState {
-  const set = newSet("メイン", DEFAULT_LAYOUTS);
-  return { version: 2, sets: [set], startupSetId: set.id };
+  return { version: 2, sets: [], startupSetId: null };
 }
 
 function normalize(s: AppState): AppState {
   for (const set of s.sets) ensureIds(set.layouts);
-  if (!s.sets.length) return defaultState();
   if (s.startupSetId && !s.sets.some((x) => x.id === s.startupSetId)) s.startupSetId = null;
   return s;
 }
