@@ -20,7 +20,7 @@ export default defineConfig({
       input: {
         options: path.resolve(import.meta.dirname, "options.html"),
         popup: path.resolve(import.meta.dirname, "popup.html"),
-        background: path.resolve(import.meta.dirname, "src/background.ts"),
+        background: path.resolve(import.meta.dirname, "src/app/background/index.ts"),
       },
       output: {
         entryFileNames: "[name].js",
