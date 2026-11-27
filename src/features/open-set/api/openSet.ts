@@ -1,5 +1,5 @@
 import { layoutFor, loadState } from "@/entities/layout-set";
-import { type Mode, normalizeGroups, pickDisplay, resolveBounds, type WindowSpec } from "@/entities/window";
+import { laptopDisplay, type Mode, normalizeGroups, pickDisplay, resolveBounds, type WindowSpec } from "@/entities/window";
 
 const NEW_TAB_URLS = ["chrome://newtab/", "chrome://new-tab-page/", "about:blank"];
 
@@ -31,14 +31,16 @@ export async function openSet({ setId, closeEmpty = false, mode }: { setId?: str
   if (!set) return;
   const toClose = closeEmpty ? await emptyWindowIds() : [];
   const displays = await chrome.system.display.getInfo();
-  const layout = layoutFor(set, mode ?? (displays.length >= 2 ? "docked" : "laptop"));
+  const layoutMode: Mode = mode ?? (displays.length >= 2 ? "docked" : "laptop");
+  const layout = layoutFor(set, layoutMode);
 
   for (const original of layout) {
     const spec = structuredClone(original);
     spec.tabs = spec.tabs.filter((t) => t.url);
     normalizeGroups(spec);
     const tabs = spec.tabs;
-    const display = pickDisplay(displays, spec.display);
+    // ノートPCのみのレイアウトは本体の画面に開く（外部ディスプレイをつないだまま試したときも）
+    const display = layoutMode === "laptop" ? laptopDisplay(displays) : pickDisplay(displays, spec.display);
     const [first, ...rest] = tabs.length ? tabs : [{ url: "chrome://newtab/" }];
     const win = await chrome.windows.create({
       url: first.url,

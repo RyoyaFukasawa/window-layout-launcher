@@ -1,8 +1,16 @@
 import type { Bounds, Display, DisplayKind, Mode, Rect, WindowSpec } from "../model/types";
 import { displayContaining, guessArea } from "./geometry";
 
+/**
+ * ノートPCのみのときに使う画面。ノートPCだけで使うときの画面＝本体の画面（判別できなければメイン）。
+ * 外部ディスプレイをつないで編集していても、本体の画面を基準にする
+ */
+export const laptopDisplay = (displays: Display[]): Display =>
+  displays.find((d) => d.isInternal) ?? displays.find((d) => d.isPrimary) ?? displays[0];
+
+/** 配置図に出す画面（ノートPCのみのときは本体の画面だけ） */
 export const shownDisplays = (displays: Display[], mode: Mode) =>
-  mode === "laptop" ? [displays.find((d) => d.isPrimary) ?? displays[0]] : displays;
+  mode === "laptop" ? [laptopDisplay(displays)] : displays;
 
 export const shortName = (d: Display, displays: Display[]) =>
   `${displays.indexOf(d) + 1} ${d.isInternal ? "本体" : "外部"}${d.isPrimary ? "・メイン" : ""}`;

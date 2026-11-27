@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Trash2 } from "lucide-react";
-import { type Area, AREA_OPTIONS, colorOf, DISPLAY_OPTIONS, type DisplayKind, normalizeGroups, type Rect, type WindowSpec } from "@/entities/window";
+import { type Area, AREA_OPTIONS, colorOf, DISPLAY_OPTIONS, type DisplayKind, type Mode, normalizeGroups, type Rect, type WindowSpec } from "@/entities/window";
 import type { TabStrip } from "@/features/tab-strip";
 import { type DroppedUrl, isUrlDrag, urlFromDrop } from "@/shared/lib/url";
 import { cn } from "@/shared/lib/utils";
@@ -24,12 +24,14 @@ interface Props {
   onResolveTitle: (tabId: string, url: string) => void;
   /** Chrome のタブの向き（横／縦） */
   strip: TabStrip;
+  /** ノートPCのみのときは、どのウィンドウも本体の画面に開くので、ディスプレイの選択は出さない */
+  mode: Mode;
 }
 
 const DISPLAY_ITEMS = Object.fromEntries(DISPLAY_OPTIONS);
 const AREA_ITEMS = Object.fromEntries(AREA_OPTIONS);
 
-export function WindowCard({ win, index, selected, onSelect, onChange: rawChange, onRemove, onAddUrl, onResolveTitle, strip }: Props) {
+export function WindowCard({ win, index, selected, onSelect, onChange: rawChange, onRemove, onAddUrl, onResolveTitle, strip, mode }: Props) {
   const color = colorOf(index);
   // 変更のたびにグループの整合をとる（固定タブを外す・同じグループのタブをまとめる）
   const onChange = (fn: (w: WindowSpec) => void) => rawChange((w) => { fn(w); normalizeGroups(w); });
@@ -50,8 +52,8 @@ export function WindowCard({ win, index, selected, onSelect, onChange: rawChange
     >
       <CardContent className="flex flex-col gap-4">
         {/* ウィンドウの番号・名前は上の切り替えタブに出ているので、ここは設定だけ */}
-        <div className="grid grid-cols-[1fr_1fr_auto] items-end gap-3">
-          <div className="flex flex-col gap-1.5">
+        <div className={cn("grid items-end gap-3", mode === "laptop" ? "grid-cols-[1fr_auto]" : "grid-cols-[1fr_1fr_auto]")}>
+          {mode !== "laptop" && <div className="flex flex-col gap-1.5">
             <Label className="text-xs text-muted-foreground">ディスプレイ</Label>
             <Select items={DISPLAY_ITEMS} value={win.display} onValueChange={(v) => v && onChange((w) => { w.display = v as DisplayKind; })}>
               <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
@@ -59,7 +61,7 @@ export function WindowCard({ win, index, selected, onSelect, onChange: rawChange
                 {DISPLAY_OPTIONS.map(([v, l]) => <SelectItem key={v} value={v}>{l}</SelectItem>)}
               </SelectContent>
             </Select>
-          </div>
+          </div>}
           <div className="flex flex-col gap-1.5">
             <Label className="text-xs text-muted-foreground">位置・サイズ</Label>
             <Select items={AREA_ITEMS} value={win.area} onValueChange={(v) => v && onChange((w) => {

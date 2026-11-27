@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { display } from "@/testing/fixtures";
-import { displayKind, fitInto } from "./display";
+import { displayKind, fitInto, shownDisplays } from "./display";
 
 describe("fitInto", () => {
   it("作業領域からはみ出さないように収める", () => {
@@ -18,5 +18,20 @@ describe("displayKind", () => {
   });
   it("ノートPCのみのモードでは常に primary", () => {
     expect(displayKind(ext, [laptop, ext], "laptop")).toBe("primary");
+  });
+});
+
+describe("shownDisplays（配置図に出す画面）", () => {
+  const laptop = display({ left: -1512, width: 1512, isInternal: true });
+  const ext = display({ left: 0, width: 2560, isPrimary: true });
+  it("ノートPCのみのときは、外部ディスプレイがメインでも本体の画面だけ", () => {
+    expect(shownDisplays([ext, laptop], "laptop")).toEqual([laptop]);
+  });
+  it("本体が判別できなければメイン", () => {
+    const ext2 = display({ left: 2560, width: 1920 });
+    expect(shownDisplays([ext2, ext], "laptop")).toEqual([ext]);
+  });
+  it("ドック時はすべての画面", () => {
+    expect(shownDisplays([ext, laptop], "docked")).toEqual([ext, laptop]);
   });
 });

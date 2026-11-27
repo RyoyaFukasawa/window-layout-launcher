@@ -54,16 +54,17 @@ export function LayoutPreview(props: Props) {
   const [live, setLive] = useState<{ text: string; left: number; top: number; display: number } | null>(null);
   const [urlOver, setUrlOver] = useState<number | "stage" | null>(null);
 
+  // 配置図には、使う画面だけを描く（ノートPCのみのときは本体の画面だけ）
   const view = useMemo<View | null>(() => {
-    if (!displays.length || !size.width) return null;
-    const minX = Math.min(...displays.map((d) => d.bounds.left));
-    const minY = Math.min(...displays.map((d) => d.bounds.top));
-    const maxX = Math.max(...displays.map((d) => d.bounds.left + d.bounds.width));
-    const maxY = Math.max(...displays.map((d) => d.bounds.top + d.bounds.height));
+    if (!shown.length || !size.width) return null;
+    const minX = Math.min(...shown.map((d) => d.bounds.left));
+    const minY = Math.min(...shown.map((d) => d.bounds.top));
+    const maxX = Math.max(...shown.map((d) => d.bounds.left + d.bounds.width));
+    const maxY = Math.max(...shown.map((d) => d.bounds.top + d.bounds.height));
     const pad = 20;
     const scale = Math.min((size.width - pad * 2) / (maxX - minX), (size.height - pad * 2) / (maxY - minY));
     return { minX, minY, scale, offX: (size.width - (maxX - minX) * scale) / 2, offY: (size.height - (maxY - minY) * scale) / 2 };
-  }, [displays, size.width, size.height]);
+  }, [shown, size.width, size.height]);
 
   // interact.js のイベントから最新の値を参照するための ref
   const latest = useRef({ props, view, shown });
@@ -129,7 +130,7 @@ export function LayoutPreview(props: Props) {
       const scr = toScreen(v, r);
       const d = displayContaining(sh, scr);
       const label = areaLabel(guessArea(d.workArea, fitInto(d.workArea, scr), false));
-      setLive({ text: `${shortName(d, p.displays)} · ${label}`, left: r.left, top: r.top, display: p.displays.indexOf(d) });
+      setLive({ text: sh.length > 1 ? `${shortName(d, p.displays)} · ${label}` : label, left: r.left, top: r.top, display: sh.indexOf(d) });
     };
     const apply = (t: HTMLElement, rawR: Bounds, edges: Edges | null) => {
       const { r, gx, gy } = snapRect(rawR, t, edges);
@@ -211,7 +212,7 @@ export function LayoutPreview(props: Props) {
       onDragLeave={(e) => { if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setUrlOver(null); }}
       onDrop={onDrop}
     >
-      {view && displays.map((d, i) => {
+      {view && shown.map((d, i) => {
         const p = toPreview(view, d.bounds);
         return (
           <div
@@ -223,7 +224,7 @@ export function LayoutPreview(props: Props) {
             style={box(p)}
           >
             <SystemBars d={d} scale={view.scale} />
-            <span
+            {shown.length > 1 && <span
               className="pointer-events-none absolute text-[11px] font-medium text-muted-foreground"
               style={{
                 left: (d.workArea.left - d.bounds.left) * view.scale + 8,
@@ -231,7 +232,7 @@ export function LayoutPreview(props: Props) {
               }}
             >
               {shortName(d, displays)}
-            </span>
+            </span>}
           </div>
         );
       })}

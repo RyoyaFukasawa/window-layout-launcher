@@ -587,6 +587,7 @@ export function OptionsPage() {
                     onSelect={(i) => setSel(i)}
                     onAdd={addWindow}
                     tabDragging={dragItem?.type === "tab"}
+                    mode={m}
                   />
                   <WindowCard
                     key={wins[view].id}
@@ -599,6 +600,7 @@ export function OptionsPage() {
                     onAddUrl={(d) => addUrl(view, d)}
                     onResolveTitle={(id, url) => void resolveTitle(id, url)}
                     strip={tabStrip.strip}
+                    mode={m}
                   />
                 </div>
               ) : (

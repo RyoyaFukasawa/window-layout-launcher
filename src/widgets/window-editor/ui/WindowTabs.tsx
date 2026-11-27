@@ -2,7 +2,7 @@
 import { SortableContext, horizontalListSortingStrategy, useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { Plus } from "lucide-react";
-import { areaLabel, colorOf, DISPLAY_OPTIONS, type WindowSpec } from "@/entities/window";
+import { areaLabel, colorOf, DISPLAY_OPTIONS, type Mode, type WindowSpec } from "@/entities/window";
 import { cn } from "@/shared/lib/utils";
 import { Favicon } from "@/shared/ui/favicon";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/shared/ui/tooltip";
@@ -16,14 +16,16 @@ interface Props {
   onAdd: () => void;
   /** タブをドラッグ中か（重ねると切り替わることを示す） */
   tabDragging: boolean;
+  /** ノートPCのみのときはディスプレイを出さない */
+  mode: Mode;
 }
 
-export function WindowTabs({ wins, current, onSelect, onAdd, tabDragging }: Props) {
+export function WindowTabs({ wins, current, onSelect, onAdd, tabDragging, mode }: Props) {
   return (
     <div role="tablist" aria-label="ウィンドウ" className="flex flex-wrap items-end gap-1">
       <SortableContext items={wins.map((w) => w.id!)} strategy={horizontalListSortingStrategy}>
         {wins.map((w, i) => (
-          <WindowTab key={w.id} win={w} index={i} selected={i === current} tabDragging={tabDragging} onSelect={() => onSelect(i)} />
+          <WindowTab key={w.id} win={w} index={i} selected={i === current} tabDragging={tabDragging} showDisplay={mode !== "laptop"} onSelect={() => onSelect(i)} />
         ))}
       </SortableContext>
       <Tooltip>
@@ -36,8 +38,8 @@ export function WindowTabs({ wins, current, onSelect, onAdd, tabDragging }: Prop
   );
 }
 
-function WindowTab({ win, index, selected, tabDragging, onSelect }: {
-  win: WindowSpec; index: number; selected: boolean; tabDragging: boolean; onSelect: () => void;
+function WindowTab({ win, index, selected, tabDragging, showDisplay, onSelect }: {
+  win: WindowSpec; index: number; selected: boolean; tabDragging: boolean; showDisplay: boolean; onSelect: () => void;
 }) {
   // 並べ替え用の id はウィンドウの id（タブのドラッグでは「このウィンドウへ移す」ドロップ先になる）
   const s = useSortable({ id: win.id!, data: { type: "window" } });
@@ -66,7 +68,7 @@ function WindowTab({ win, index, selected, tabDragging, onSelect }: {
       <span className="min-w-0 flex-1">
         <span className="block truncate text-sm font-medium">ウィンドウ {index + 1}</span>
         <span className="block truncate text-[11px] text-muted-foreground">
-          {DISPLAY_SHORT[win.display] ?? win.display} ・ {areaLabel(win.area === "custom" ? { area: "custom", custom: win.custom ?? { x: 0, y: 0, w: 100, h: 100 } } : { area: win.area })} ・ タブ {tabs.length}
+          {showDisplay && `${DISPLAY_SHORT[win.display] ?? win.display} ・ `}{areaLabel(win.area === "custom" ? { area: "custom", custom: win.custom ?? { x: 0, y: 0, w: 100, h: 100 } } : { area: win.area })} ・ タブ {tabs.length}
         </span>
       </span>
       <span className="flex shrink-0 -space-x-1">
